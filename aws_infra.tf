@@ -76,8 +76,8 @@ resource "aws_route_table_association" "PrivateSubnetAssociation" {
     subnet_id = aws_subnet.PrivateSubnet.id
     route_table_id = aws_route_table.PrivateRouteTable.id
 }
-resource "aws_security_group" "Sg_VM1" {
-  name        = "Sg_VM1"
+resource "aws_security_group" "SG" {
+  name        = "SG"
   vpc_id        = aws_vpc.Vpc.id
   dynamic "ingress" {
     iterator = port
@@ -120,7 +120,7 @@ resource "aws_instance" "VM1" {
   instance_type = "t2.micro"
   associate_public_ip_address = true
   subnet_id     = aws_subnet.PublicSubnet.id
-  vpc_security_group_ids = [aws_security_group.Sg_VM1.id]
+  vpc_security_group_ids = [aws_security_group.SG.id]
   key_name = aws_key_pair.app_key.id
   provisioner "remote-exec"  {
     inline  = [
@@ -134,6 +134,7 @@ resource "aws_instance" "VM1" {
       "sudo systemctl start jenkins",
       "sudo wget https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm",
       "sudo yum install -y epel-release-latest-7.noarch.rpm",
+      "sudo rm -rf epel-release-latest-7.noarch.rpm",
       "sudo yum update -y",
       "sudo yum install git python python-devel python-pip openssl ansible -y",
       "sudo wget https://repos.fedorapeople.org/repos/dchen/apache-maven/epel-apache-maven.repo -O /etc/yum.repos.d/epel-apache-maven.repo",
@@ -144,7 +145,7 @@ resource "aws_instance" "VM1" {
       host        = self.public_ip
       user        = "ec2-user"
       type        = "ssh"
-      private_key = "${file("/home/ec2-user/private_key.pem")}"
+      private_key = file("./private_key.pem")
       timeout     = "1m"
       agent       =  false
     }
@@ -157,23 +158,9 @@ resource "aws_instance" "VM2" {
   ami           = data.aws_ami.amazon_linux.id
   instance_type = "t2.micro"
   subnet_id     = aws_subnet.PrivateSubnet.id
-  vpc_security_group_ids = [aws_security_group.Sg_VM1.id]
+  vpc_security_group_ids = [aws_security_group.SG.id]
   key_name = aws_key_pair.app_key.id
-  provisioner "remote-exec"  {
-    inline  = [
-          "sudo amazon-linux-extras install tomcat8.5 -y",
-      "sudo systemctl start tomcat"
-      ]
-  connection {
-      host        = self.private_ip
-      user        = "ec2-user"
-      type        = "ssh"
-      private_key = "${file("/home/ec2-user/private_key.pem")}"
-      timeout     = "1m"
-      agent       =  false
-    }
-  }
- tags = {
-    Name = "Node"
+  tags = {
+    Name = "NODE"
   }
 }
